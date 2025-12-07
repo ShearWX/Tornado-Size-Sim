@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IWC Innovative Technical Bulletin Generator</title>
+    <style>
+        /* CSS for the page layout and components */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+        .container {
+            max-width: 750px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            /* Removed position: relative; as it's not needed without the absolute positioned button */
+        }
+        h1 {
+            color: #1e3a8a; /* Dark Blue for IWC look */
+            text-align: center;
+            margin-top: 0;
+            padding-top: 10px;
+            border-bottom: 2px solid #ccc;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #3b82f6;
+            margin-top: 20px;
+            font-size: 1.25rem;
+        }
+        label, select, input, textarea, button {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        select, input[type="text"], input[type="date"], input[type="time"], textarea {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        /* Style for disabled elements in Alert Details (Section 1) */
+        .disabled-input {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background-color: #eee;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .input-group > div {
+            flex: 1;
+        }
+        button {
+            background-color: #1e3a8a; /* Dark Blue */
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 12px;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #1d4ed8;
+        }
+        #alertOutput {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #e0f2fe; /* Very light blue background */
+            border: 2px solid #93c5fd;
+            border-radius: 4px;
+            min-height: 150px;
+            font-size: 1.0em;
+            color: #1f2937;
+            white-space: pre-wrap; /* Preserve formatting for the full alert text */
+            line-height: 1.6;
+            font-family: 'Courier New', Courier, monospace; /* Monospace for bulletin feel */
+        }
+        hr {
+            border: 0;
+            height: 1px;
+            background-color: #ddd;
+            margin: 20px 0;
+        }
+        /* CSS for darking out the MCD section */
+        .mcd-disabled {
+            opacity: 0.4; /* Visually darkens the area */
+            pointer-events: none; /* Prevents interaction with all children */
+            transition: opacity 0.3s ease;
+        }
+        /* CSS for the back navigation button (REMOVED) */
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- New Back Navigation Link (REMOVED) -->
+
+    <h1>IWC Alert Generator</h1>
+
+    <!-- 1. Alert Details -->
+    <h2>1. Alert Details</h2>
+    <div id="alertDetailInputs">
+        <div>
+            <label for="type">Alert Type (Watch, Warning, Emergency):</label>
+            <select id="type">
+                <option value="Watch">Watch</option>
+                <option value="Warning">Warning</option>
+                <option value="Emergency">Emergency</option>
+                <option value="Advisory">Advisory</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="hazard">Hazard/Event:</label>
+            <select id="hazard">
+                <option value="Tornado">Tornado</option>
+                <option value="Snow Squall">Snow Squall</option>
+                <option value="Flash Flood">Flash Flood</option>
+                <option value="Severe Thunderstorm">Severe Thunderstorm</option>
+                <option value="Child Abduction">Child Abduction (Amber Alert)</option>
+                <option value="Wildfire">Wildfire</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="severityDetail">Optional Hazard Detail (e.g., Extreme):</label>
+            <select id="severityDetail">
+                <option value="">None</option>
+                <option value="Extreme">Extreme</option>
+                <option value="Significant">Significant</option>
+                <option value="Limited">Limited</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="location">Location (County/Area):</label>
+            <input type="text" id="location" placeholder="e.g., Central Florida Region">
+        </div>
+    </div>
+
+    <hr>
+    <h2>2. Time and Date (Expiration time is critical)</h2>
+    <div class="input-group">
+        <div>
+            <label for="issueDate">Issued Date:</label>
+            <input type="date" id="issueDate">
+        </div>
+        <div>
+            <label for="issueTime">Issued Time (24h format):</label>
+            <input type="time" id="issueTime">
+        </div>
+    </div>
+
+    <div class="input-group">
+        <div>
+            <label for="expirationDate">Expiration Date:</label>
+            <input type="date" id="expirationDate">
+        </div>
+        <div>
+            <label for="expirationTime">Expiration Time (24h format):</label>
+            <input type="time" id="expirationTime">
+        </div>
+    </div>
+    
+    <hr>
+    <!-- 3. Mesoscale Discussion Parameters -->
+    <h2>3. Mesoscale Discussion Parameters (MCD)</h2>
+    <div style="margin-bottom: 20px; padding: 10px; background-color: #f0f4ff; border-radius: 4px;">
+        <input type="checkbox" id="activateMCDOverride" onchange="toggleMCDOverride()" style="width: auto; margin-right: 10px; display: inline-block;">
+        <label for="activateMCDOverride" style="display: inline; font-weight: bold; width: auto;">Activate MCD Focus Mode (Disables Alert Details Section)</label>
+    </div>
+    
+    <div id="mcdParameterInputs" class="mcd-disabled"> <!-- CONTAINER FOR MCD INPUTS - DEFAULT DISABLED/DARKENED -->
+        <div class="input-group">
+            <div>
+                <label for="cape">Convective Available Potential Energy (CAPE) [J/kg]:</label>
+                <input type="text" id="cape" value="2500" placeholder="e.g., 2500">
+            </div>
+            <div>
+                <label for="shear">Deep-Layer Wind Shear [knots]:</label>
+                <input type="text" id="shear" value="50" placeholder="e.g., 50">
+            </div>
+        </div>
+
+        <div class="input-group">
+            <div>
+                <label for="stp">Significant Tornado Parameter (STP):</label>
+                <input type="text" id="stp" value="1.5" placeholder="e.g., 1.5">
+            </div>
+            <div>
+                <label for="mcdDuration">Discussion Duration (Custom Text):</label>
+                <input type="text" id="mcdDuration" value="4 hours" placeholder="e.g., 4 hours or until 00Z">
+            </div>
+        </div>
+        
+        <div class="input-group">
+            <div>
+                <label for="furtherAnalysis">Further Mesoscale Analysis Details:</label>
+                <input type="text" id="furtherAnalysis" placeholder="e.g., Strong low-level jets, Cap is eroding">
+            </div>
+            <div></div> 
+        </div>
+    </div>
+
+
+    <!-- 4. Free Text Option -->
+    <hr>
+    <h2>4. Custom Message (Overrides all fields if used)</h2>
+    <label for="customText">Enter full technical statement:</label>
+    <textarea id="customText" rows="6" placeholder="BULLETIN - IMMEDIATE BROADCAST REQUESTED - INNOVATIVE WEATHER CENTER..."></textarea>
+
+    <!-- Output and Action -->
+    <button onclick="generateAndSpeakAlert()">5. Generate & Read Technical Bulletin</button>
+
+    <h3>Generated Bulletin Text:</h3>
+    <div id="alertOutput"></div>
+
+</div>
+
+<script>
+    // Function to handle enabling/disabling of Alert Details (Section 1) and MCD Parameters (Section 3)
+    function toggleMCDOverride() {
+        const isChecked = document.getElementById('activateMCDOverride').checked;
+        const alertInputsContainer = document.getElementById('alertDetailInputs');
+        const mcdInputsContainer = document.getElementById('mcdParameterInputs'); // New reference for MCD section
+
+        // 1. Manage Alert Details (Section 1) - Disabled when MCD Focus is ON
+        const alertElements = alertInputsContainer.querySelectorAll('select, input[type="text"]');
+
+        alertElements.forEach(element => {
+            // Keep location always enabled for the bulletin
+            if (element.id === 'location') {
+                element.disabled = false;
+                element.classList.remove('disabled-input');
+            } else {
+                // Disable/grey out all other elements (Type, Hazard, SeverityDetail)
+                element.disabled = isChecked;
+                if (isChecked) {
+                    element.classList.add('disabled-input');
+                } else {
+                    element.classList.remove('disabled-input');
+                }
+            }
+        });
+
+        // 2. Manage MCD Parameters (Section 3) - Enabled only when MCD Focus is ON
+        if (isChecked) {
+            mcdInputsContainer.classList.remove('mcd-disabled');
+        } else {
+            mcdInputsContainer.classList.add('mcd-disabled');
+        }
+    }
+
+    // Set default dates/times to current day for convenience
+    document.addEventListener('DOMContentLoaded', () => {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const todayDate = `${yyyy}-${mm}-${dd}`;
+        
+        document.getElementById('issueDate').value = todayDate;
+        document.getElementById('expirationDate').value = todayDate;
+        
+        // Set default time (5 minutes from now)
+        const now = new Date(today.getTime() + 5 * 60000); 
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const currentTime = `${hours}:${minutes}`;
+        document.getElementById('issueTime').value = currentTime;
+        document.getElementById('expirationTime').value = currentTime; // Default expire is same as issue
+
+        // Initial check for MCD override state (ensures Section 3 starts disabled)
+        toggleMCDOverride(); 
+    });
+
+    function generateAndSpeakAlert() {
+        const customText = document.getElementById('customText').value.trim();
+        let finalAlertText = '';
+
+        if (customText) {
+            // Use custom text if provided
+            finalAlertText = customText;
+        } else {
+            // --- Retrieve Bulletin Fields ---
+            const type = document.getElementById('type').value;
+            const hazard = document.getElementById('hazard').value;
+            const severityDetail = document.getElementById('severityDetail').value;
+            const location = document.getElementById('location').value.trim() || 'AN UNSPECIFIED AREA';
+
+            const issueDate = document.getElementById('issueDate').value;
+            const issueTime = document.getElementById('issueTime').value;
+            const expirationDate = document.getElementById('expirationDate').value;
+            const expirationTime = document.getElementById('expirationTime').value;
+
+            // --- Retrieve Mesoscale Fields ---
+            const capeStr = document.getElementById('cape').value.trim();
+            const shearStr = document.getElementById('shear').value.trim();
+            const stpStr = document.getElementById('stp').value.trim();
+            // RENAMED VARIABLE RETRIEVAL:
+            const furtherAnalysis = document.getElementById('furtherAnalysis').value.trim();
+            const mcdDuration = document.getElementById('mcdDuration').value.trim() || 'UNKNOWN DURATION';
+            
+            // Check if MCD Focus Mode is active
+            const isMCDFocus = document.getElementById('activateMCDOverride').checked;
+
+            // Convert to numbers, defaulting to 0 if input is invalid or missing
+            const cape = parseFloat(capeStr) || 0;
+            const shear = parseFloat(shearStr) || 0;
+            const stp = parseFloat(stpStr) || 0;
+            
+            let discussionConcerns = '';
+            let forecastReasoning = '';
+            let actionPhrase = '';
+
+            // --- Dynamic Discussion Concerns Generation ---
+            if (stp > 2.5 && shear > 55) {
+                discussionConcerns = `EXTREME POTENTIAL FOR SIGNIFICANT (EF2+) TORNADOES AND POWERFUL SUPERCELLS.`;
+            } else if (stp >= 1.0 && shear >= 40) {
+                discussionConcerns = `HIGH POTENTIAL FOR ORGANIZED SUPERCELLS, LARGE HAIL, AND DAMAGING WINDS.`;
+            } else if (cape > 2000 && shear > 30) {
+                discussionConcerns = `MODERATE POTENTIAL FOR STRONG THUNDERSTORMS, INCLUDING HAIL AND GUSTY WINDS.`;
+            } else {
+                discussionConcerns = `LIMITED POTENTIAL FOR SEVERE WEATHER. MONITORING CONVECTIVE INITIATION.`;
+            }
+
+            // --- Dynamic Forecast Reasoning Generation ---
+
+            // 1. Instability summary
+            let instabilitySummary = '';
+            if (cape > 3500) {
+                instabilitySummary = `Atmosphere exhibits EXTREME instability (CAPE: ${capeStr} J/kg).`;
+            } else if (cape > 1500) {
+                instabilitySummary = `Atmosphere exhibits HIGH instability (CAPE: ${capeStr} J/kg).`;
+            } else {
+                instabilitySummary = `Atmosphere exhibits LIMITED instability (CAPE: ${capeStr} J/kg).`;
+            }
+
+            // 2. Shear and Rotation summary
+            let shearSummary = '';
+            if (shear > 50) {
+                shearSummary = `Deep-layer shear is VERY STRONG (${shearStr} knots), highly favorable for SUPERCELL structure.`;
+            } else if (shear > 30) {
+                shearSummary = `Deep-layer shear is MODERATE (${shearStr} knots), supporting organized multi-cell activity.`;
+            } else {
+                shearSummary = `Deep-layer shear is WEAK (${shearStr} knots), favoring pulse thunderstorm activity.`;
+            }
+
+            // 3. STP summary
+            const stpSummary = stp >= 1.0 ? 
+                `High STP value of ${stpStr} indicates a favorable environment for low-level rotation.` :
+                `Low STP value of ${stpStr} suggests limited tornado potential.`;
+            
+            // 4. Analysis Detail integration into reasoning (PUTTING IT BACK HERE)
+            const analysisDetail = furtherAnalysis ? 
+                ` FURTHER ANALYSIS NOTES: ${furtherAnalysis.trim().toUpperCase()}.` : '';
+
+            // Combine reasoning
+            forecastReasoning = `${instabilitySummary} ${shearSummary} ${stpSummary} ${analysisDetail}`;
+            forecastReasoning = forecastReasoning.trim().replace(/\s\s+/g, ' ');
+
+            
+            // --- Helper Functions ---
+            const formatDateTime = (dateStr, timeStr) => {
+                try {
+                    // Create Date object using YYYY-MM-DDTHH:MM format
+                    const date = new Date(`${dateStr}T${timeStr}:00`);
+                    if (isNaN(date)) return 'UNKNOWN DATE/TIME';
+                    
+                    const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' };
+                    const dateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+
+                    // Format: 15:30 UTC MAR 25 2024
+                    return `${date.toLocaleTimeString('en-US', timeOptions).replace(/ /g, '')}Z ${date.toLocaleDateString('en-US', dateOptions).toUpperCase()}`;
+                } catch {
+                    return `${timeStr} UTC ${dateStr}`;
+                }
+            };
+            
+            const issued = formatDateTime(issueDate, issueTime);
+            const expires = formatDateTime(expirationDate, expirationTime);
+            
+            const detail = severityDetail ? `${severityDetail.toUpperCase()} ` : '';
+
+            // Conditional Header and Action based on MCD Focus Mode
+            let alertHeader;
+            let alertBody;
+            
+            if (isMCDFocus) {
+                // Pure MCD Output
+                alertHeader = 'MESOSCALE TECHNICAL UPDATE';
+                alertBody = 'THE FOLLOWING IS A TECHNICAL MESOSCALE DISCUSSION AND IS NOT AN OFFICIAL WATCH, WARNING, OR EMERGENCY ALERT.';
+                actionPhrase = 'MONITOR CONDITIONS CLOSELY. FURTHER ALERTS MAY BE REQUIRED.';
+
+            } else {
+                // Standard Alert Output
+                alertHeader = `${hazard.toUpperCase()} ${type.toUpperCase()}`;
+                alertBody = `A ${detail}${hazard.toUpperCase()} ${type.toUpperCase()} IS IN EFFECT FOR ${location.toUpperCase()}.`;
+                actionPhrase = type === 'Emergency' ? 'IMMEDIATE EVACUATION AND SHELTERING REQUIRED' : 'PREPAREDNESS ACTIONS RECOMMENDED';
+            }
+            
+            // --- Construct the Detailed Technical Bulletin ---
+            const mesoscaleSection = `
+MESOSCALE CONVECTIVE DISCUSSION (MCD)
+VALID ${issued} TO ${expires} (${mcdDuration.toUpperCase()})
+
+DISCUSSION CONCERNS: ${discussionConcerns}
+
+ATMOSPHERIC PARAMETERS:
+  CONVECTIVE AVAILABLE POTENTIAL ENERGY (CAPE): ${capeStr} J/kg
+  DEEP-LAYER WIND SHEAR: ${shearStr} knots
+  SIGNIFICANT TORNADO PARAMETER (STP): ${stpStr}
+
+FORECAST REASONING: ${forecastReasoning}
+`;
+            
+            // Build the final text using the conditional headers/body
+            finalAlertText = `
+BULLETIN - IMMEDIATE BROADCAST REQUESTED
+INNOVATIVE WEATHER CENTER
+THE FOLLOWING IS A NON-OFFICIAL ALERT AND SHOULD BE TAKEN LIGHTLY.
+${alertHeader}
+ISSUED AT ${issued}
+EXPIRES AT ${expires}
+
+${alertBody}
+
+${mesoscaleSection.trim()}
+---
+CALL TO ACTION
+---
+
+${actionPhrase} IN THE AFFECTED REGION ${location.toUpperCase()}. MONITOR OFFICIAL INNOVATIVE WEATHER CENTER CHANNELS FOR CONTINUOUS UPDATES. SHELTERING PROTOCOLS SHOULD BE INITIATED BY LOCAL EMERGENCY MANAGEMENT IMMEDIATELY.
+
+(END INNOVATIVE WEATHER CENTER BULLETIN)`;
+        }
+
+        // Display the text on the page
+        document.getElementById('alertOutput').textContent = finalAlertText;
+
+        // Use standard Web Speech API to read the text
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(finalAlertText);
+            
+            // Adjust speech rate slightly slower for an announcement feel
+            utterance.rate = 0.85; 
+            
+            // Speak the message
+            window.speechSynthesis.cancel(); // Stop any current speech
+            window.speechSynthesis.speak(utterance);
+        } else {
+            document.getElementById('alertOutput').textContent = "Generated Alert: " + finalAlertText;
+            console.error("Your browser does not support the Web Speech API (Text-to-Speech).");
+        }
+    }
+</script>
+
+</body>
+</html>
