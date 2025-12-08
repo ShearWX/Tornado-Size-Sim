@@ -18,7 +18,6 @@
             padding: 25px;
             border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            /* Removed position: relative; as it's not needed without the absolute positioned button */
         }
         h1 {
             color: #1e3a8a; /* Dark Blue for IWC look */
@@ -49,6 +48,11 @@
             opacity: 0.6;
             cursor: not-allowed;
             background-color: #eee;
+        }
+        /* Style for disabled options within a select */
+        select option:disabled {
+            background-color: #f0f0f0;
+            color: #888;
         }
         .input-group {
             display: flex;
@@ -97,15 +101,12 @@
             pointer-events: none; /* Prevents interaction with all children */
             transition: opacity 0.3s ease;
         }
-        /* CSS for the back navigation button (REMOVED) */
     </style>
 </head>
 <body>
 
 <div class="container">
     
-    <!-- New Back Navigation Link (REMOVED) -->
-
     <h1>IWC Alert Generator</h1>
 
     <!-- 1. Alert Details -->
@@ -113,7 +114,7 @@
     <div id="alertDetailInputs">
         <div>
             <label for="type">Alert Type (Watch, Warning, Emergency):</label>
-            <select id="type">
+            <select id="type" onchange="handleTypeChange()">
                 <option value="Watch">Watch</option>
                 <option value="Warning">Warning</option>
                 <option value="Emergency">Emergency</option>
@@ -123,29 +124,29 @@
 
         <div>
             <label for="hazard">Hazard/Event:</label>
-            <select id="hazard">
+            <select id="hazard" onchange="handleHazardChange()">
                 <option value="Tornado">Tornado</option>
                 <option value="Snow Squall">Snow Squall</option>
                 <option value="Flash Flood">Flash Flood</option>
                 <option value="Severe Thunderstorm">Severe Thunderstorm</option>
-                <option value="Child Abduction">Child Abduction (Amber Alert)</option>
-                <option value="Wildfire">Wildfire</option>
             </select>
         </div>
 
-        <div>
-            <label for="severityDetail">Optional Hazard Detail (e.g., Extreme):</label>
-            <select id="severityDetail">
-                <option value="">None</option>
-                <option value="Extreme">Extreme</option>
-                <option value="Significant">Significant</option>
-                <option value="Limited">Limited</option>
-            </select>
-        </div>
-
+        <!-- REMOVED Optional Hazard Detail (severityDetail) as requested -->
+        
         <div>
             <label for="location">Location (County/Area):</label>
             <input type="text" id="location" placeholder="e.g., Central Florida Region">
+        </div>
+        
+        <!-- UPDATED Observation Basis dropdown with new option -->
+        <div>
+            <label for="alertBasis">Observation Basis:</label>
+            <select id="alertBasis">
+                <option value="Radar indicated rotation">Radar indicated rotation</option>
+                <option value="Radar indicated">Radar indicated</option>
+                <option value="Observed">Observed</option>
+            </select>
         </div>
     </div>
 
@@ -229,13 +230,83 @@
 </div>
 
 <script>
+    // Define allowed Alert Types for each Hazard based on common standards.
+    const hazardTypeMap = {
+        'Tornado': ['Watch', 'Warning', 'Emergency'], 
+        'Snow Squall': ['Watch', 'Warning'], 
+        'Flash Flood': ['Watch', 'Warning', 'Advisory'], 
+        'Severe Thunderstorm': ['Watch', 'Warning'], 
+    };
+
+    // Function to manage which Alert Types and Observation Basis options are available based on the selected Hazard
+    function handleHazardChange() {
+        const hazard = document.getElementById('hazard').value;
+        const typeSelect = document.getElementById('type');
+        const alertBasisSelect = document.getElementById('alertBasis');
+
+        // 1. Filter Alert Types (existing logic)
+        const allowedTypes = hazardTypeMap[hazard] || hazardTypeMap['Tornado']; 
+        let isCurrentTypeDisabled = true;
+        Array.from(typeSelect.options).forEach(option => {
+            const isAllowed = allowedTypes.includes(option.value);
+            option.disabled = !isAllowed;
+            if (typeSelect.value === option.value && isAllowed) {
+                isCurrentTypeDisabled = false;
+            }
+        });
+        if (isCurrentTypeDisabled) {
+            const firstAllowedOption = Array.from(typeSelect.options).find(opt => allowedTypes.includes(opt.value));
+            if (firstAllowedOption) {
+                typeSelect.value = firstAllowedOption.value;
+            }
+        }
+
+        // 2. Filter Observation Basis options (NEW LOGIC for "Radar indicated rotation")
+        const rotationOption = Array.from(alertBasisSelect.options).find(opt => opt.value === 'Radar indicated rotation');
+
+        if (rotationOption) {
+            // Disable rotation option if the hazard is NOT 'Tornado'
+            const shouldDisableRotation = (hazard !== 'Tornado');
+            rotationOption.disabled = shouldDisableRotation;
+
+            // If the currently selected basis is the disabled one, switch to 'Radar indicated' (the next best default)
+            if (shouldDisableRotation && alertBasisSelect.value === 'Radar indicated rotation') {
+                alertBasisSelect.value = 'Radar indicated';
+            }
+        }
+
+
+        // 3. After updating type options and basis options, we must update the alert basis visibility (existing logic)
+        handleTypeChange();
+    }
+
+
+    // Function to handle the visual state of the Observation Basis based on Alert Type (Watch/Advisory)
+    function handleTypeChange() {
+        const type = document.getElementById('type').value;
+        const alertBasisSelect = document.getElementById('alertBasis');
+        const isMCDFocus = document.getElementById('activateMCDOverride').checked;
+
+        // If MCD focus is on, we don't change anything here, as the alert basis is already disabled by toggleMCDOverride
+        if (isMCDFocus) return;
+
+        // Disable and grey out the WHOLE select if type is Watch or Advisory (prognostic)
+        const shouldDisable = (type === 'Watch' || type === 'Advisory');
+
+        alertBasisSelect.disabled = shouldDisable;
+        if (shouldDisable) {
+            alertBasisSelect.classList.add('disabled-input');
+        } else {
+            alertBasisSelect.classList.remove('disabled-input');
+        }
+    }
+
     // Function to handle enabling/disabling of Alert Details (Section 1) and MCD Parameters (Section 3)
     function toggleMCDOverride() {
         const isChecked = document.getElementById('activateMCDOverride').checked;
         const alertInputsContainer = document.getElementById('alertDetailInputs');
-        const mcdInputsContainer = document.getElementById('mcdParameterInputs'); // New reference for MCD section
+        const mcdInputsContainer = document.getElementById('mcdParameterInputs'); 
 
-        // 1. Manage Alert Details (Section 1) - Disabled when MCD Focus is ON
         const alertElements = alertInputsContainer.querySelectorAll('select, input[type="text"]');
 
         alertElements.forEach(element => {
@@ -243,8 +314,16 @@
             if (element.id === 'location') {
                 element.disabled = false;
                 element.classList.remove('disabled-input');
+            } else if (element.id === 'alertBasis') {
+                // If MCD focus is on, disable it. Otherwise, defer to handleTypeChange()
+                if (isChecked) {
+                    element.disabled = true;
+                    element.classList.add('disabled-input');
+                } else {
+                    handleTypeChange(); // Re-apply Watch/Advisory logic
+                }
             } else {
-                // Disable/grey out all other elements (Type, Hazard, SeverityDetail)
+                // Disable/grey out all other elements (Type, Hazard) if MCD focus is on
                 element.disabled = isChecked;
                 if (isChecked) {
                     element.classList.add('disabled-input');
@@ -281,8 +360,9 @@
         document.getElementById('issueTime').value = currentTime;
         document.getElementById('expirationTime').value = currentTime; // Default expire is same as issue
 
-        // Initial check for MCD override state (ensures Section 3 starts disabled)
-        toggleMCDOverride(); 
+        // Initial check for both disabling functions
+        handleHazardChange(); // Initialize hazard constraints first (including new basis logic)
+        toggleMCDOverride(); // Then apply MCD or handleTypeChange
     });
 
     function generateAndSpeakAlert() {
@@ -296,9 +376,9 @@
             // --- Retrieve Bulletin Fields ---
             const type = document.getElementById('type').value;
             const hazard = document.getElementById('hazard').value;
-            const severityDetail = document.getElementById('severityDetail').value;
             const location = document.getElementById('location').value.trim() || 'AN UNSPECIFIED AREA';
-
+            const alertBasis = document.getElementById('alertBasis').value; 
+            
             const issueDate = document.getElementById('issueDate').value;
             const issueTime = document.getElementById('issueTime').value;
             const expirationDate = document.getElementById('expirationDate').value;
@@ -308,7 +388,6 @@
             const capeStr = document.getElementById('cape').value.trim();
             const shearStr = document.getElementById('shear').value.trim();
             const stpStr = document.getElementById('stp').value.trim();
-            // RENAMED VARIABLE RETRIEVAL:
             const furtherAnalysis = document.getElementById('furtherAnalysis').value.trim();
             const mcdDuration = document.getElementById('mcdDuration').value.trim() || 'UNKNOWN DURATION';
             
@@ -323,8 +402,11 @@
             let discussionConcerns = '';
             let forecastReasoning = '';
             let actionPhrase = '';
+            let alertHeader = '';
+            let mainAlertDescription = '';
+            let mesoscaleContent = ''; 
 
-            // --- Dynamic Discussion Concerns Generation ---
+            // --- Dynamic Discussion Concerns & Reasoning Generation (Used for MCD) ---
             if (stp > 2.5 && shear > 55) {
                 discussionConcerns = `EXTREME POTENTIAL FOR SIGNIFICANT (EF2+) TORNADOES AND POWERFUL SUPERCELLS.`;
             } else if (stp >= 1.0 && shear >= 40) {
@@ -335,9 +417,7 @@
                 discussionConcerns = `LIMITED POTENTIAL FOR SEVERE WEATHER. MONITORING CONVECTIVE INITIATION.`;
             }
 
-            // --- Dynamic Forecast Reasoning Generation ---
-
-            // 1. Instability summary
+            // Instability summary
             let instabilitySummary = '';
             if (cape > 3500) {
                 instabilitySummary = `Atmosphere exhibits EXTREME instability (CAPE: ${capeStr} J/kg).`;
@@ -347,7 +427,7 @@
                 instabilitySummary = `Atmosphere exhibits LIMITED instability (CAPE: ${capeStr} J/kg).`;
             }
 
-            // 2. Shear and Rotation summary
+            // Shear and Rotation summary
             let shearSummary = '';
             if (shear > 50) {
                 shearSummary = `Deep-layer shear is VERY STRONG (${shearStr} knots), highly favorable for SUPERCELL structure.`;
@@ -357,12 +437,12 @@
                 shearSummary = `Deep-layer shear is WEAK (${shearStr} knots), favoring pulse thunderstorm activity.`;
             }
 
-            // 3. STP summary
+            // STP summary
             const stpSummary = stp >= 1.0 ? 
                 `High STP value of ${stpStr} indicates a favorable environment for low-level rotation.` :
                 `Low STP value of ${stpStr} suggests limited tornado potential.`;
             
-            // 4. Analysis Detail integration into reasoning (PUTTING IT BACK HERE)
+            // Analysis Detail integration into reasoning
             const analysisDetail = furtherAnalysis ? 
                 ` FURTHER ANALYSIS NOTES: ${furtherAnalysis.trim().toUpperCase()}.` : '';
 
@@ -371,7 +451,7 @@
             forecastReasoning = forecastReasoning.trim().replace(/\s\s+/g, ' ');
 
             
-            // --- Helper Functions ---
+            // --- Helper Function ---
             const formatDateTime = (dateStr, timeStr) => {
                 try {
                     // Create Date object using YYYY-MM-DDTHH:MM format
@@ -391,27 +471,17 @@
             const issued = formatDateTime(issueDate, issueTime);
             const expires = formatDateTime(expirationDate, expirationTime);
             
-            const detail = severityDetail ? `${severityDetail.toUpperCase()} ` : '';
-
-            // Conditional Header and Action based on MCD Focus Mode
-            let alertHeader;
-            let alertBody;
+            // --- Conditional Header, Description, and MCD Content Assembly ---
             
             if (isMCDFocus) {
                 // Pure MCD Output
                 alertHeader = 'MESOSCALE TECHNICAL UPDATE';
-                alertBody = 'THE FOLLOWING IS A TECHNICAL MESOSCALE DISCUSSION AND IS NOT AN OFFICIAL WATCH, WARNING, OR EMERGENCY ALERT.';
+                mainAlertDescription = 'THE FOLLOWING IS A TECHNICAL MESOSALE DISCUSSION AND IS NOT AN OFFICIAL WATCH, WARNING, OR EMERGENCY ALERT.';
                 actionPhrase = 'MONITOR CONDITIONS CLOSELY. FURTHER ALERTS MAY BE REQUIRED.';
+                
+                // Define mesoscaleContent only if MCD Focus is active
+                mesoscaleContent = `
 
-            } else {
-                // Standard Alert Output
-                alertHeader = `${hazard.toUpperCase()} ${type.toUpperCase()}`;
-                alertBody = `A ${detail}${hazard.toUpperCase()} ${type.toUpperCase()} IS IN EFFECT FOR ${location.toUpperCase()}.`;
-                actionPhrase = type === 'Emergency' ? 'IMMEDIATE EVACUATION AND SHELTERING REQUIRED' : 'PREPAREDNESS ACTIONS RECOMMENDED';
-            }
-            
-            // --- Construct the Detailed Technical Bulletin ---
-            const mesoscaleSection = `
 MESOSCALE CONVECTIVE DISCUSSION (MCD)
 VALID ${issued} TO ${expires} (${mcdDuration.toUpperCase()})
 
@@ -422,10 +492,63 @@ ATMOSPHERIC PARAMETERS:
   DEEP-LAYER WIND SHEAR: ${shearStr} knots
   SIGNIFICANT TORNADO PARAMETER (STP): ${stpStr}
 
-FORECAST REASONING: ${forecastReasoning}
+FORECAST REASONING: ${forecastReasoning}`;
+
+            } else {
+                // Standard Alert Output with detailed severity
+                alertHeader = `${hazard.toUpperCase()} ${type.toUpperCase()}`;
+                actionPhrase = type === 'Emergency' ? 'IMMEDIATE EVACUATION AND SHELTERING REQUIRED' : 'PREPAREDNESS ACTIONS RECOMMENDED';
+                
+                let urgencyWord = '';
+                let actionWord = '';
+                let severityDescription = '';
+                let confirmationLine = '';
+
+                // Determine the urgency/severity description based on type
+                if (type === 'Emergency') {
+                    urgencyWord = 'VIOLENT, LIFE-THREATENING';
+                    actionWord = 'IMMEDIATE';
+                    severityDescription = 'THIS IS AN EXTREMELY DANGEROUS, LIFE-THREATENING SITUATION. A VIOLENT, DESTRUCTIVE WEATHER PHENOMENON IS MOVING INTO ';
+                } else if (type === 'Warning') {
+                    urgencyWord = 'SEVERE, DANGEROUS';
+                    actionWord = 'URGENT';
+                    severityDescription = 'A SEVERE AND DANGEROUS WEATHER PHENOMENON IS IMMINENT OR OCCURRING IN ';
+                } else if (type === 'Watch') {
+                    urgencyWord = 'POTENTIAL FOR DANGEROUS';
+                    actionWord = 'PREPARATORY';
+                    severityDescription = 'CONDITIONS ARE FAVORABLE FOR THE DEVELOPMENT OF DANGEROUS WEATHER. BE PREPARED TO ACT QUICKLY IN ';
+                } else { // Advisory
+                    urgencyWord = 'CAUTIONARY';
+                    actionWord = 'CAUTIOUS';
+                    severityDescription = 'CAUTION IS ADVISED DUE TO ';
+                }
+                
+                // Determine confirmation source based on alertBasis, only for Warning/Emergency
+                if (type === 'Warning' || type === 'Emergency') {
+                    if (alertBasis === 'Observed') {
+                        confirmationLine = `THE ${hazard.toUpperCase()} WAS OBSERVED BY SPOTTERS.`;
+                    } else if (alertBasis === 'Radar indicated rotation') {
+                        confirmationLine = `THE ${hazard.toUpperCase()} IS CONFIRMED BY RADAR INDICATED ROTATION.`;
+                    } else if (alertBasis === 'Radar indicated') {
+                        confirmationLine = `THE ${hazard.toUpperCase()} IS CONFIRMED BY RADAR.`;
+                    }
+                }
+                
+                const intro = `A ${urgencyWord} ${hazard.toUpperCase()} ${type.toUpperCase()} IS IN EFFECT FOR ${location.toUpperCase()} UNTIL ${expires}.`;
+                
+                // Construct the descriptive body
+                mainAlertDescription = `
+${intro}
+
+${severityDescription}${location.toUpperCase()}.
+${confirmationLine ? confirmationLine + '\n\n' : ''}${actionWord} ACTION IS REQUIRED TO PROTECT YOURSELF AND YOUR FAMILY FROM THIS HAZARD.
 `;
+
+                mainAlertDescription = mainAlertDescription.trim();
+                mesoscaleContent = ''; // Ensure it is empty
+            }
             
-            // Build the final text using the conditional headers/body
+            // Build the final text
             finalAlertText = `
 BULLETIN - IMMEDIATE BROADCAST REQUESTED
 INNOVATIVE WEATHER CENTER
@@ -434,9 +557,9 @@ ${alertHeader}
 ISSUED AT ${issued}
 EXPIRES AT ${expires}
 
-${alertBody}
+${mainAlertDescription}
+${mesoscaleContent.trim()}
 
-${mesoscaleSection.trim()}
 ---
 CALL TO ACTION
 ---
