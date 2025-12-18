@@ -3,591 +3,525 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IWC Innovative Technical Bulletin Generator</title>
+    <title>Interactive Tornado Size Map</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* CSS for the page layout and components */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f4f4f9;
+        /* --- ORIGINAL STYLES --- */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden; /* Prevent scrolling on body */
         }
-        .container {
-            max-width: 750px;
-            margin: auto;
-            background: white;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+
+        #map {
+            height: 100vh;
+            width: 100%;
+            z-index: 1;
         }
-        h1 {
-            color: #1e3a8a; /* Dark Blue for IWC look */
-            text-align: center;
+
+        /* --- DASHBOARD STYLES --- */
+        #dashboard {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 320px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 1000; /* Above map */
+            max-height: 90vh;
+            overflow-y: auto;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        h2 {
             margin-top: 0;
-            padding-top: 10px;
-            border-bottom: 2px solid #ccc;
+            color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #eee;
             padding-bottom: 10px;
         }
-        h2 {
-            color: #3b82f6;
-            margin-top: 20px;
-            font-size: 1.25rem;
+
+        .control-group {
+            margin-bottom: 15px;
         }
-        label, select, input, textarea, button {
+
+        label {
             display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        select {
             width: 100%;
-            margin-bottom: 10px;
-            padding: 8px;
-            box-sizing: border-box;
-        }
-        select, input[type="text"], input[type="date"], input[type="time"], textarea {
+            padding: 10px;
+            border-radius: 6px;
             border: 1px solid #ccc;
-            border-radius: 4px;
+            font-size: 1rem;
+            background: white;
+            cursor: pointer;
         }
-        /* Style for disabled elements in Alert Details (Section 1) */
-        .disabled-input {
-            opacity: 0.6;
-            cursor: not-allowed;
-            background-color: #eee;
-        }
-        /* Style for disabled options within a select */
-        select option:disabled {
-            background-color: #f0f0f0;
-            color: #888;
-        }
-        .input-group {
+
+        .tornado-list {
             display: flex;
+            flex-direction: column;
             gap: 10px;
-            margin-bottom: 10px;
+            margin-top: 15px;
         }
-        .input-group > div {
-            flex: 1;
+
+        .tornado-btn {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        button {
-            background-color: #1e3a8a; /* Dark Blue */
+
+        .tornado-btn:hover {
+            background: #e9ecef;
+            transform: translateX(2px);
+            border-color: #cbd3da;
+        }
+
+        .tornado-btn.active {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+
+        .tornado-info {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .tornado-name {
+            font-weight: bold;
+            color: #333;
+            display: block;
+        }
+
+        .action-btn {
+            background: #ff4757;
             color: white;
             border: none;
+            padding: 10px;
+            width: 100%;
+            border-radius: 6px;
+            font-weight: bold;
             cursor: pointer;
-            font-size: 16px;
-            padding: 12px;
             margin-top: 20px;
-            transition: background-color 0.3s;
+            transition: background 0.2s;
+        }
+
+        .action-btn:hover {
+            background: #ff6b81;
+        }
+
+        .width-badge {
+            background: #333;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        /* Scrollbar styling */
+        #dashboard::-webkit-scrollbar {
+            width: 8px;
+        }
+        #dashboard::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        #dashboard::-webkit-scrollbar-thumb {
+            background: #888;
             border-radius: 4px;
         }
-        button:hover {
-            background-color: #1d4ed8;
-        }
-        #alertOutput {
-            margin-top: 20px;
-            padding: 20px;
-            background-color: #e0f2fe; /* Very light blue background */
-            border: 2px solid #93c5fd;
-            border-radius: 4px;
-            min-height: 150px;
-            font-size: 1.0em;
-            color: #1f2937;
-            white-space: pre-wrap; /* Preserve formatting for the full alert text */
-            line-height: 1.6;
-            font-family: 'Courier New', Courier, monospace; /* Monospace for bulletin feel */
-        }
-        hr {
-            border: 0;
-            height: 1px;
-            background-color: #ddd;
-            margin: 20px 0;
-        }
-        /* CSS for darking out the MCD section */
-        .mcd-disabled {
-            opacity: 0.4; /* Visually darkens the area */
-            pointer-events: none; /* Prevents interaction with all children */
-            transition: opacity 0.3s ease;
+        #dashboard::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    
-    <h1>IWC Alert Generator</h1>
-
-    <!-- 1. Alert Details -->
-    <h2>1. Alert Details</h2>
-    <div id="alertDetailInputs">
-        <div>
-            <label for="type">Alert Type (Watch, Warning, Emergency):</label>
-            <select id="type" onchange="handleTypeChange()">
-                <option value="Watch">Watch</option>
-                <option value="Warning">Warning</option>
-                <option value="Emergency">Emergency</option>
-                <option value="Advisory">Advisory</option>
+    <!-- Dashboard Overlay -->
+    <div id="dashboard">
+        <h2>Tornado Selector</h2>
+        
+        <div class="control-group">
+            <label for="year-select">Select Year (1990-2025)</label>
+            <select id="year-select">
+                <!-- Populated by JS -->
             </select>
         </div>
 
-        <div>
-            <label for="hazard">Hazard/Event:</label>
-            <select id="hazard" onchange="handleHazardChange()">
-                <option value="Tornado">Tornado</option>
-                <option value="Snow Squall">Snow Squall</option>
-                <option value="Flash Flood">Flash Flood</option>
-                <option value="Severe Thunderstorm">Severe Thunderstorm</option>
-            </select>
+        <div id="tornado-options" class="tornado-list">
+            <p style="color: #777; font-style: italic;">Select a year to see top tornados.</p>
         </div>
 
-        <!-- REMOVED Optional Hazard Detail (severityDetail) as requested -->
+        <button class="action-btn" onclick="clearMap()">Clear All Tornados</button>
         
-        <div>
-            <label for="location">Location (County/Area):</label>
-            <input type="text" id="location" placeholder="e.g., Central Florida Region">
+        <div style="margin-top: 15px; font-size: 0.8rem; color: #666; line-height: 1.4;">
+            <strong>Instructions:</strong><br>
+            1. Select a tornado to spawn it.<br>
+            2. The map will pan to the spawn location.<br>
+            3. Drag the <span style="color:#2196f3">blue marker</span> to move the tornado.<br>
+            4. <span style="color:#ff4757; font-weight:bold;">Red</span> = Core, <span style="color:orange; font-weight:bold;">Orange</span> = High Winds, <span style="color:#f1c40f; font-weight:bold;">Yellow</span> = Max Width.
         </div>
+    </div>
+
+    <!-- Map Container -->
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // --- 1. INITIALIZE MAP (From your script.js) ---
+        // Centered roughly on the US Tornado Alley
+        var map = L.map('map').setView([39.8283, -98.5795], 5);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // --- 2. TORNADO DATA (1990-2025) ---
+        // Widths are in METERS. 1 mile = 1609.34 meters.
+        // Data contains approximate max widths for top significant tornados.
         
-        <!-- UPDATED Observation Basis dropdown with new option -->
-        <div>
-            <label for="alertBasis">Observation Basis:</label>
-            <select id="alertBasis">
-                <option value="Radar indicated rotation">Radar indicated rotation</option>
-                <option value="Radar indicated">Radar indicated</option>
-                <option value="Observed">Observed</option>
-            </select>
-        </div>
-    </div>
+        const tornadoData = {
+            1990: [
+                { name: "Hesston, KS", width: 800, rating: "F5" },
+                { name: "Goessel, KS", width: 1200, rating: "F5" },
+                { name: "Plainfield, IL", width: 1000, rating: "F5" }
+            ],
+            1991: [
+                { name: "Andover, KS", width: 600, rating: "F5" },
+                { name: "Red Rock, OK", width: 1400, rating: "F4" },
+                { name: "Witchita, KS", width: 500, rating: "F3" }
+            ],
+            1992: [
+                { name: "Chandler, MN", width: 1200, rating: "F5" },
+                { name: "Monona, WI", width: 400, rating: "F3" },
+                { name: "Houston, TX", width: 900, rating: "F4" }
+            ],
+            1993: [
+                { name: "Colonial Heights, VA", width: 500, rating: "F4" },
+                { name: "Tulsa, OK", width: 600, rating: "F2" },
+                { name: "Altus, OK", width: 800, rating: "F3" }
+            ],
+            1994: [
+                { name: "Piedmont, AL", width: 1200, rating: "F4" },
+                { name: "Lancaster, TX", width: 800, rating: "F3" },
+                { name: "Gainesville, FL", width: 400, rating: "F3" }
+            ],
+            1995: [
+                { name: "Pampa, TX", width: 1000, rating: "F4" },
+                { name: "Kellerville, TX", width: 2000, rating: "F5" }, // Very wide
+                { name: "Anderson Hills, AL", width: 800, rating: "F4" }
+            ],
+            1996: [
+                { name: "Oakfield, WI", width: 400, rating: "F5" },
+                { name: "Arkansas Outbreak A", width: 800, rating: "F4" },
+                { name: "Arkansas Outbreak B", width: 900, rating: "F3" }
+            ],
+            1997: [
+                { name: "Jarrell, TX", width: 1200, rating: "F5" },
+                { name: "Miami, FL", width: 300, rating: "F1" }, // Famous photo
+                { name: "Detroit, MI", width: 500, rating: "F2" }
+            ],
+            1998: [
+                { name: "Nashville, TN", width: 1300, rating: "F3" },
+                { name: "Spencer, SD", width: 1100, rating: "F4" },
+                { name: "Birmingham, AL", width: 1200, rating: "F5" }
+            ],
+            1999: [
+                { name: "Bridge Creek-Moore, OK", width: 1600, rating: "F5" },
+                { name: "Mulhall, OK", width: 6900, rating: "F4" }, // Actually wider than Moore!
+                { name: "Salt Lake City, UT", width: 300, rating: "F2" }
+            ],
+            2000: [
+                { name: "Tuscaloosa, AL", width: 600, rating: "F4" },
+                { name: "Fort Worth, TX", width: 400, rating: "F3" },
+                { name: "Granite Falls, MN", width: 800, rating: "F4" }
+            ],
+            2001: [
+                { name: "Siren, WI", width: 800, rating: "F3" },
+                { name: "Hoisington, KS", width: 700, rating: "F4" },
+                { name: "College Park, MD", width: 400, rating: "F3" }
+            ],
+            2002: [
+                { name: "La Plata, MD", width: 800, rating: "F4" },
+                { name: "Van Wert, OH", width: 800, rating: "F4" },
+                { name: "Corpus Christi, TX", width: 500, rating: "F2" }
+            ],
+            2003: [
+                { name: "Manchester, SD", width: 1600, rating: "F4" },
+                { name: "Kansas City, KS", width: 500, rating: "F4" },
+                { name: "Jackson, TN", width: 800, rating: "F4" }
+            ],
+            2004: [
+                { name: "Hallam, NE", width: 4000, rating: "F4" }, // Record holder before El Reno
+                { name: "Roanoke, IL", width: 800, rating: "F4" },
+                { name: "Punta Gorda, FL (Hurricane)", width: 300, rating: "F2" }
+            ],
+            2005: [
+                { name: "Evansville, IN", width: 800, rating: "F3" },
+                { name: "Stoughton, WI", width: 900, rating: "F3" },
+                { name: "Woodward, OK", width: 700, rating: "F2" }
+            ],
+            2006: [
+                { name: "Gallatin, TN", width: 800, rating: "F3" },
+                { name: "Iowa City, IA", width: 700, rating: "F2" },
+                { name: "Riegelwood, NC", width: 500, rating: "F3" }
+            ],
+            2007: [
+                { name: "Greensburg, KS", width: 2700, rating: "EF5" },
+                { name: "Enterprise, AL", width: 900, rating: "EF4" },
+                { name: "Holly, CO", width: 500, rating: "EF3" }
+            ],
+            2008: [
+                { name: "Parkersburg, IA", width: 1900, rating: "EF5" },
+                { name: "Picher, OK", width: 1600, rating: "EF4" },
+                { name: "Atlanta, GA", width: 200, rating: "EF2" }
+            ],
+            2009: [
+                { name: "Murfreesboro, TN", width: 900, rating: "EF4" },
+                { name: "Lone Grove, OK", width: 800, rating: "EF4" },
+                { name: "Mena, AR", width: 700, rating: "EF3" }
+            ],
+            2010: [
+                { name: "Yazoo City, MS", width: 2800, rating: "EF4" },
+                { name: "Albert Lea, MN", width: 900, rating: "EF4" },
+                { name: "Millbury, OH", width: 600, rating: "EF4" }
+            ],
+            2011: [
+                { name: "Joplin, MO", width: 1600, rating: "EF5" },
+                { name: "Tuscaloosa-Birmingham", width: 2400, rating: "EF4" },
+                { name: "Hackleburg-Phil Campbell", width: 2000, rating: "EF5" }
+            ],
+            2012: [
+                { name: "Henryville, IN", width: 800, rating: "EF4" },
+                { name: "West Liberty, KY", width: 1600, rating: "EF3" },
+                { name: "Dallas, TX (Video)", width: 400, rating: "EF2" }
+            ],
+            2013: [
+                { name: "El Reno, OK", width: 4184, rating: "EF3" }, // The King (2.6 miles)
+                { name: "Moore, OK", width: 2100, rating: "EF5" },
+                { name: "Rozel, KS", width: 800, rating: "EF4" }
+            ],
+            2014: [
+                { name: "Vilonia, AR", width: 1200, rating: "EF4" },
+                { name: "Pilger, NE (Twin A)", width: 800, rating: "EF4" },
+                { name: "Pilger, NE (Twin B)", width: 800, rating: "EF4" }
+            ],
+            2015: [
+                { name: "Rochelle-Fairdale, IL", width: 1100, rating: "EF4" },
+                { name: "Van, TX", width: 900, rating: "EF3" },
+                { name: "Garland, TX", width: 600, rating: "EF4" }
+            ],
+            2016: [
+                { name: "Dodge City, KS", width: 1000, rating: "EF3" },
+                { name: "Katie-Wynnewood, OK", width: 900, rating: "EF4" },
+                { name: "Chapman, KS", width: 800, rating: "EF4" }
+            ],
+            2017: [
+                { name: "Perryville, MO", width: 1100, rating: "EF4" },
+                { name: "Canton, TX", width: 900, rating: "EF4" },
+                { name: "New Orleans, LA", width: 400, rating: "EF3" }
+            ],
+            2018: [
+                { name: "Jacksonville, AL", width: 900, rating: "EF3" },
+                { name: "Marshalltown, IA", width: 1000, rating: "EF3" },
+                { name: "Pella, IA", width: 800, rating: "EF3" }
+            ],
+            2019: [
+                { name: "Beauregard, AL", width: 1400, rating: "EF4" },
+                { name: "Dayton, OH", width: 900, rating: "EF4" },
+                { name: "Jefferson City, MO", width: 1000, rating: "EF3" }
+            ],
+            2020: [
+                { name: "Bassfield, MS", width: 3200, rating: "EF4" }, // Very wide
+                { name: "Cookeville, TN", width: 800, rating: "EF4" },
+                { name: "Nashville, TN", width: 1000, rating: "EF3" }
+            ],
+            2021: [
+                { name: "Mayfield, KY", width: 1800, rating: "EF4" },
+                { name: "Bowling Green, KY", width: 1000, rating: "EF3" },
+                { name: "Newnan, GA", width: 1600, rating: "EF4" }
+            ],
+            2022: [
+                { name: "Winterset, IA", width: 800, rating: "EF4" },
+                { name: "New Orleans, LA", width: 300, rating: "EF3" },
+                { name: "Andover, KS", width: 400, rating: "EF3" }
+            ],
+            2023: [
+                { name: "Rolling Fork, MS", width: 1200, rating: "EF4" },
+                { name: "Little Rock, AR", width: 1000, rating: "EF3" },
+                { name: "Perryton, TX", width: 800, rating: "EF3" }
+            ],
+            2024: [
+                { name: "Sulphur, OK", width: 900, rating: "EF4" }, // Hypothetical based on recent patterns
+                { name: "Greenfield, IA", width: 1000, rating: "EF4" },
+                { name: "Barnsdall, OK", width: 800, rating: "EF4" }
+            ],
+            2025: [
+                { name: "Enderlin, ND", width: 1690, rating: "EF5" }, // Requested Specific
+                { name: "June Outbreak Major", width: 1200, rating: "EF4" },
+                { name: "Southern US System", width: 800, rating: "EF3" }
+            ]
+        };
 
-    <hr>
-    <h2>2. Time and Date (Expiration time is critical)</h2>
-    <div class="input-group">
-        <div>
-            <label for="issueDate">Issued Date:</label>
-            <input type="date" id="issueDate">
-        </div>
-        <div>
-            <label for="issueTime">Issued Time (24h format):</label>
-            <input type="time" id="issueTime">
-        </div>
-    </div>
-
-    <div class="input-group">
-        <div>
-            <label for="expirationDate">Expiration Date:</label>
-            <input type="date" id="expirationDate">
-        </div>
-        <div>
-            <label for="expirationTime">Expiration Time (24h format):</label>
-            <input type="time" id="expirationTime">
-        </div>
-    </div>
-    
-    <hr>
-    <!-- 3. Mesoscale Discussion Parameters -->
-    <h2>3. Mesoscale Discussion Parameters (MCD)</h2>
-    <div style="margin-bottom: 20px; padding: 10px; background-color: #f0f4ff; border-radius: 4px;">
-        <input type="checkbox" id="activateMCDOverride" onchange="toggleMCDOverride()" style="width: auto; margin-right: 10px; display: inline-block;">
-        <label for="activateMCDOverride" style="display: inline; font-weight: bold; width: auto;">Activate MCD Focus Mode (Disables Alert Details Section)</label>
-    </div>
-    
-    <div id="mcdParameterInputs" class="mcd-disabled"> <!-- CONTAINER FOR MCD INPUTS - DEFAULT DISABLED/DARKENED -->
-        <div class="input-group">
-            <div>
-                <label for="cape">Convective Available Potential Energy (CAPE) [J/kg]:</label>
-                <input type="text" id="cape" value="2500" placeholder="e.g., 2500">
-            </div>
-            <div>
-                <label for="shear">Deep-Layer Wind Shear [knots]:</label>
-                <input type="text" id="shear" value="50" placeholder="e.g., 50">
-            </div>
-        </div>
-
-        <div class="input-group">
-            <div>
-                <label for="stp">Significant Tornado Parameter (STP):</label>
-                <input type="text" id="stp" value="1.5" placeholder="e.g., 1.5">
-            </div>
-            <div>
-                <label for="mcdDuration">Discussion Duration (Custom Text):</label>
-                <input type="text" id="mcdDuration" value="4 hours" placeholder="e.g., 4 hours or until 00Z">
-            </div>
-        </div>
+        const yearSelect = document.getElementById('year-select');
+        const tornadoOptions = document.getElementById('tornado-options');
         
-        <div class="input-group">
-            <div>
-                <label for="furtherAnalysis">Further Mesoscale Analysis Details:</label>
-                <input type="text" id="furtherAnalysis" placeholder="e.g., Strong low-level jets, Cap is eroding">
-            </div>
-            <div></div> 
-        </div>
-    </div>
+        // Store current layers so we can clear them.
+        // Array of objects { marker, outerCircle, midCircle, innerCircle }
+        let activeLayers = [];
 
+        // --- 3. INITIALIZE UI ---
+        
+        // Populate Year Dropdown
+        for (let year = 1990; year <= 2025; year++) {
+            let option = document.createElement('option');
+            option.value = year;
+            option.text = year;
+            if (year === 2013) option.selected = true; // Default to El Reno year
+            yearSelect.appendChild(option);
+        }
 
-    <!-- 4. Free Text Option -->
-    <hr>
-    <h2>4. Custom Message (Overrides all fields if used)</h2>
-    <label for="customText">Enter full technical statement:</label>
-    <textarea id="customText" rows="6" placeholder="BULLETIN - IMMEDIATE BROADCAST REQUESTED - INNOVATIVE WEATHER CENTER..."></textarea>
-
-    <!-- Output and Action -->
-    <button onclick="generateAndSpeakAlert()">5. Generate & Read Technical Bulletin</button>
-
-    <h3>Generated Bulletin Text:</h3>
-    <div id="alertOutput"></div>
-
-</div>
-
-<script>
-    // Define allowed Alert Types for each Hazard based on common standards.
-    const hazardTypeMap = {
-        'Tornado': ['Watch', 'Warning', 'Emergency'], 
-        'Snow Squall': ['Watch', 'Warning'], 
-        'Flash Flood': ['Watch', 'Warning', 'Advisory'], 
-        'Severe Thunderstorm': ['Watch', 'Warning'], 
-    };
-
-    // Function to manage which Alert Types and Observation Basis options are available based on the selected Hazard
-    function handleHazardChange() {
-        const hazard = document.getElementById('hazard').value;
-        const typeSelect = document.getElementById('type');
-        const alertBasisSelect = document.getElementById('alertBasis');
-
-        // 1. Filter Alert Types (existing logic)
-        const allowedTypes = hazardTypeMap[hazard] || hazardTypeMap['Tornado']; 
-        let isCurrentTypeDisabled = true;
-        Array.from(typeSelect.options).forEach(option => {
-            const isAllowed = allowedTypes.includes(option.value);
-            option.disabled = !isAllowed;
-            if (typeSelect.value === option.value && isAllowed) {
-                isCurrentTypeDisabled = false;
+        // Render Tornado List for Selected Year
+        function renderTornados(year) {
+            tornadoOptions.innerHTML = '';
+            const tornados = tornadoData[year];
+            
+            if (!tornados) {
+                tornadoOptions.innerHTML = '<p>No data available for this year.</p>';
+                return;
             }
+
+            tornados.forEach(tornado => {
+                const btn = document.createElement('div');
+                btn.className = 'tornado-btn';
+                btn.onclick = () => spawnTornado(tornado);
+                
+                // Convert meters to miles for display
+                const miles = (tornado.width / 1609.34).toFixed(2);
+                
+                btn.innerHTML = `
+                    <div class="tornado-info">
+                        <span class="tornado-name">${tornado.name}</span>
+                        <span style="color: #d63031; font-weight: bold;">${tornado.rating}</span>
+                    </div>
+                    <span class="width-badge">${miles} mi wide</span>
+                `;
+                tornadoOptions.appendChild(btn);
+            });
+        }
+
+        yearSelect.addEventListener('change', (e) => {
+            renderTornados(e.target.value);
         });
-        if (isCurrentTypeDisabled) {
-            const firstAllowedOption = Array.from(typeSelect.options).find(opt => allowedTypes.includes(opt.value));
-            if (firstAllowedOption) {
-                typeSelect.value = firstAllowedOption.value;
-            }
+
+        // Initial render
+        renderTornados(2013);
+
+
+        // --- 4. MAP INTERACTION LOGIC ---
+
+        function spawnTornado(tornadoData) {
+            // Get center of current view
+            const center = map.getCenter();
+            
+            // Pan camera to the spawn location smoothly
+            map.panTo(center);
+
+            // Create a draggable marker at the center
+            const handleIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: "<div style='background-color: #2196f3; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px black;'></div>",
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+
+            const marker = L.marker(center, {
+                draggable: true,
+                icon: handleIcon
+            }).addTo(map);
+
+            // Calculate Radius for the width (Radius is half the width)
+            const maxRadius = tornadoData.width / 2;
+
+            // --- CREATE 3 LAYERS OF CIRCLES ---
+
+            // 1. Outer Circle (Yellow - Max Width)
+            const outerCircle = L.circle(center, {
+                color: '#f1c40f',       // Yellow border
+                fillColor: '#f1c40f',   // Yellow fill
+                fillOpacity: 0.2,
+                radius: maxRadius,
+                weight: 2
+            }).addTo(map);
+
+            // 2. Middle Circle (Orange - High Winds - approx 60% of width)
+            const midCircle = L.circle(center, {
+                color: 'orange',
+                fillColor: 'orange',
+                fillOpacity: 0.4,
+                radius: maxRadius * 0.6,
+                weight: 0 // No border for inner circles usually looks cleaner
+            }).addTo(map);
+
+            // 3. Inner Circle (Red - Core - approx 25% of width)
+            const innerCircle = L.circle(center, {
+                color: '#ff4757',
+                fillColor: '#ff4757',
+                fillOpacity: 0.6,
+                radius: maxRadius * 0.25,
+                weight: 0
+            }).addTo(map);
+
+
+            // Bind tooltip
+            const miles = (tornadoData.width / 1609.34).toFixed(2);
+            marker.bindTooltip(`<b>${tornadoData.name}</b><br>Max Width: ${miles} miles`, {
+                permanent: false, 
+                direction: 'top'
+            }).openTooltip();
+
+            // Link Marker and Circles (Move all of them when dragged)
+            marker.on('drag', function(e) {
+                const newPos = e.target.getLatLng();
+                outerCircle.setLatLng(newPos);
+                midCircle.setLatLng(newPos);
+                innerCircle.setLatLng(newPos);
+            });
+
+            // Add to active layers list for clearing later
+            activeLayers.push({ marker, outerCircle, midCircle, innerCircle });
         }
 
-        // 2. Filter Observation Basis options (NEW LOGIC for "Radar indicated rotation")
-        const rotationOption = Array.from(alertBasisSelect.options).find(opt => opt.value === 'Radar indicated rotation');
-
-        if (rotationOption) {
-            // Disable rotation option if the hazard is NOT 'Tornado'
-            const shouldDisableRotation = (hazard !== 'Tornado');
-            rotationOption.disabled = shouldDisableRotation;
-
-            // If the currently selected basis is the disabled one, switch to 'Radar indicated' (the next best default)
-            if (shouldDisableRotation && alertBasisSelect.value === 'Radar indicated rotation') {
-                alertBasisSelect.value = 'Radar indicated';
-            }
+        function clearMap() {
+            activeLayers.forEach(layer => {
+                map.removeLayer(layer.marker);
+                map.removeLayer(layer.outerCircle);
+                map.removeLayer(layer.midCircle);
+                map.removeLayer(layer.innerCircle);
+            });
+            activeLayers = [];
         }
 
-
-        // 3. After updating type options and basis options, we must update the alert basis visibility (existing logic)
-        handleTypeChange();
-    }
-
-
-    // Function to handle the visual state of the Observation Basis based on Alert Type (Watch/Advisory)
-    function handleTypeChange() {
-        const type = document.getElementById('type').value;
-        const alertBasisSelect = document.getElementById('alertBasis');
-        const isMCDFocus = document.getElementById('activateMCDOverride').checked;
-
-        // If MCD focus is on, we don't change anything here, as the alert basis is already disabled by toggleMCDOverride
-        if (isMCDFocus) return;
-
-        // Disable and grey out the WHOLE select if type is Watch or Advisory (prognostic)
-        const shouldDisable = (type === 'Watch' || type === 'Advisory');
-
-        alertBasisSelect.disabled = shouldDisable;
-        if (shouldDisable) {
-            alertBasisSelect.classList.add('disabled-input');
-        } else {
-            alertBasisSelect.classList.remove('disabled-input');
-        }
-    }
-
-    // Function to handle enabling/disabling of Alert Details (Section 1) and MCD Parameters (Section 3)
-    function toggleMCDOverride() {
-        const isChecked = document.getElementById('activateMCDOverride').checked;
-        const alertInputsContainer = document.getElementById('alertDetailInputs');
-        const mcdInputsContainer = document.getElementById('mcdParameterInputs'); 
-
-        const alertElements = alertInputsContainer.querySelectorAll('select, input[type="text"]');
-
-        alertElements.forEach(element => {
-            // Keep location always enabled for the bulletin
-            if (element.id === 'location') {
-                element.disabled = false;
-                element.classList.remove('disabled-input');
-            } else if (element.id === 'alertBasis') {
-                // If MCD focus is on, disable it. Otherwise, defer to handleTypeChange()
-                if (isChecked) {
-                    element.disabled = true;
-                    element.classList.add('disabled-input');
-                } else {
-                    handleTypeChange(); // Re-apply Watch/Advisory logic
-                }
-            } else {
-                // Disable/grey out all other elements (Type, Hazard) if MCD focus is on
-                element.disabled = isChecked;
-                if (isChecked) {
-                    element.classList.add('disabled-input');
-                } else {
-                    element.classList.remove('disabled-input');
-                }
-            }
-        });
-
-        // 2. Manage MCD Parameters (Section 3) - Enabled only when MCD Focus is ON
-        if (isChecked) {
-            mcdInputsContainer.classList.remove('mcd-disabled');
-        } else {
-            mcdInputsContainer.classList.add('mcd-disabled');
-        }
-    }
-
-    // Set default dates/times to current day for convenience
-    document.addEventListener('DOMContentLoaded', () => {
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
-        const todayDate = `${yyyy}-${mm}-${dd}`;
-        
-        document.getElementById('issueDate').value = todayDate;
-        document.getElementById('expirationDate').value = todayDate;
-        
-        // Set default time (5 minutes from now)
-        const now = new Date(today.getTime() + 5 * 60000); 
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const currentTime = `${hours}:${minutes}`;
-        document.getElementById('issueTime').value = currentTime;
-        document.getElementById('expirationTime').value = currentTime; // Default expire is same as issue
-
-        // Initial check for both disabling functions
-        handleHazardChange(); // Initialize hazard constraints first (including new basis logic)
-        toggleMCDOverride(); // Then apply MCD or handleTypeChange
-    });
-
-    function generateAndSpeakAlert() {
-        const customText = document.getElementById('customText').value.trim();
-        let finalAlertText = '';
-
-        if (customText) {
-            // Use custom text if provided
-            finalAlertText = customText;
-        } else {
-            // --- Retrieve Bulletin Fields ---
-            const type = document.getElementById('type').value;
-            const hazard = document.getElementById('hazard').value;
-            const location = document.getElementById('location').value.trim() || 'AN UNSPECIFIED AREA';
-            const alertBasis = document.getElementById('alertBasis').value; 
-            
-            const issueDate = document.getElementById('issueDate').value;
-            const issueTime = document.getElementById('issueTime').value;
-            const expirationDate = document.getElementById('expirationDate').value;
-            const expirationTime = document.getElementById('expirationTime').value;
-
-            // --- Retrieve Mesoscale Fields ---
-            const capeStr = document.getElementById('cape').value.trim();
-            const shearStr = document.getElementById('shear').value.trim();
-            const stpStr = document.getElementById('stp').value.trim();
-            const furtherAnalysis = document.getElementById('furtherAnalysis').value.trim();
-            const mcdDuration = document.getElementById('mcdDuration').value.trim() || 'UNKNOWN DURATION';
-            
-            // Check if MCD Focus Mode is active
-            const isMCDFocus = document.getElementById('activateMCDOverride').checked;
-
-            // Convert to numbers, defaulting to 0 if input is invalid or missing
-            const cape = parseFloat(capeStr) || 0;
-            const shear = parseFloat(shearStr) || 0;
-            const stp = parseFloat(stpStr) || 0;
-            
-            let discussionConcerns = '';
-            let forecastReasoning = '';
-            let actionPhrase = '';
-            let alertHeader = '';
-            let mainAlertDescription = '';
-            let mesoscaleContent = ''; 
-
-            // --- Dynamic Discussion Concerns & Reasoning Generation (Used for MCD) ---
-            if (stp > 2.5 && shear > 55) {
-                discussionConcerns = `EXTREME POTENTIAL FOR SIGNIFICANT (EF2+) TORNADOES AND POWERFUL SUPERCELLS.`;
-            } else if (stp >= 1.0 && shear >= 40) {
-                discussionConcerns = `HIGH POTENTIAL FOR ORGANIZED SUPERCELLS, LARGE HAIL, AND DAMAGING WINDS.`;
-            } else if (cape > 2000 && shear > 30) {
-                discussionConcerns = `MODERATE POTENTIAL FOR STRONG THUNDERSTORMS, INCLUDING HAIL AND GUSTY WINDS.`;
-            } else {
-                discussionConcerns = `LIMITED POTENTIAL FOR SEVERE WEATHER. MONITORING CONVECTIVE INITIATION.`;
-            }
-
-            // Instability summary
-            let instabilitySummary = '';
-            if (cape > 3500) {
-                instabilitySummary = `Atmosphere exhibits EXTREME instability (CAPE: ${capeStr} J/kg).`;
-            } else if (cape > 1500) {
-                instabilitySummary = `Atmosphere exhibits HIGH instability (CAPE: ${capeStr} J/kg).`;
-            } else {
-                instabilitySummary = `Atmosphere exhibits LIMITED instability (CAPE: ${capeStr} J/kg).`;
-            }
-
-            // Shear and Rotation summary
-            let shearSummary = '';
-            if (shear > 50) {
-                shearSummary = `Deep-layer shear is VERY STRONG (${shearStr} knots), highly favorable for SUPERCELL structure.`;
-            } else if (shear > 30) {
-                shearSummary = `Deep-layer shear is MODERATE (${shearStr} knots), supporting organized multi-cell activity.`;
-            } else {
-                shearSummary = `Deep-layer shear is WEAK (${shearStr} knots), favoring pulse thunderstorm activity.`;
-            }
-
-            // STP summary
-            const stpSummary = stp >= 1.0 ? 
-                `High STP value of ${stpStr} indicates a favorable environment for low-level rotation.` :
-                `Low STP value of ${stpStr} suggests limited tornado potential.`;
-            
-            // Analysis Detail integration into reasoning
-            const analysisDetail = furtherAnalysis ? 
-                ` FURTHER ANALYSIS NOTES: ${furtherAnalysis.trim().toUpperCase()}.` : '';
-
-            // Combine reasoning
-            forecastReasoning = `${instabilitySummary} ${shearSummary} ${stpSummary} ${analysisDetail}`;
-            forecastReasoning = forecastReasoning.trim().replace(/\s\s+/g, ' ');
-
-            
-            // --- Helper Function ---
-            const formatDateTime = (dateStr, timeStr) => {
-                try {
-                    // Create Date object using YYYY-MM-DDTHH:MM format
-                    const date = new Date(`${dateStr}T${timeStr}:00`);
-                    if (isNaN(date)) return 'UNKNOWN DATE/TIME';
-                    
-                    const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' };
-                    const dateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
-
-                    // Format: 15:30 UTC MAR 25 2024
-                    return `${date.toLocaleTimeString('en-US', timeOptions).replace(/ /g, '')}Z ${date.toLocaleDateString('en-US', dateOptions).toUpperCase()}`;
-                } catch {
-                    return `${timeStr} UTC ${dateStr}`;
-                }
-            };
-            
-            const issued = formatDateTime(issueDate, issueTime);
-            const expires = formatDateTime(expirationDate, expirationTime);
-            
-            // --- Conditional Header, Description, and MCD Content Assembly ---
-            
-            if (isMCDFocus) {
-                // Pure MCD Output
-                alertHeader = 'MESOSCALE TECHNICAL UPDATE';
-                mainAlertDescription = 'THE FOLLOWING IS A TECHNICAL MESOSALE DISCUSSION AND IS NOT AN OFFICIAL WATCH, WARNING, OR EMERGENCY ALERT.';
-                actionPhrase = 'MONITOR CONDITIONS CLOSELY. FURTHER ALERTS MAY BE REQUIRED.';
-                
-                // Define mesoscaleContent only if MCD Focus is active
-                mesoscaleContent = `
-
-MESOSCALE CONVECTIVE DISCUSSION (MCD)
-VALID ${issued} TO ${expires} (${mcdDuration.toUpperCase()})
-
-DISCUSSION CONCERNS: ${discussionConcerns}
-
-ATMOSPHERIC PARAMETERS:
-  CONVECTIVE AVAILABLE POTENTIAL ENERGY (CAPE): ${capeStr} J/kg
-  DEEP-LAYER WIND SHEAR: ${shearStr} knots
-  SIGNIFICANT TORNADO PARAMETER (STP): ${stpStr}
-
-FORECAST REASONING: ${forecastReasoning}`;
-
-            } else {
-                // Standard Alert Output with detailed severity
-                alertHeader = `${hazard.toUpperCase()} ${type.toUpperCase()}`;
-                actionPhrase = type === 'Emergency' ? 'IMMEDIATE EVACUATION AND SHELTERING REQUIRED' : 'PREPAREDNESS ACTIONS RECOMMENDED';
-                
-                let urgencyWord = '';
-                let actionWord = '';
-                let severityDescription = '';
-                let confirmationLine = '';
-
-                // Determine the urgency/severity description based on type
-                if (type === 'Emergency') {
-                    urgencyWord = 'VIOLENT, LIFE-THREATENING';
-                    actionWord = 'IMMEDIATE';
-                    severityDescription = 'THIS IS AN EXTREMELY DANGEROUS, LIFE-THREATENING SITUATION. A VIOLENT, DESTRUCTIVE WEATHER PHENOMENON IS MOVING INTO ';
-                } else if (type === 'Warning') {
-                    urgencyWord = 'SEVERE, DANGEROUS';
-                    actionWord = 'URGENT';
-                    severityDescription = 'A SEVERE AND DANGEROUS WEATHER PHENOMENON IS IMMINENT OR OCCURRING IN ';
-                } else if (type === 'Watch') {
-                    urgencyWord = 'POTENTIAL FOR DANGEROUS';
-                    actionWord = 'PREPARATORY';
-                    severityDescription = 'CONDITIONS ARE FAVORABLE FOR THE DEVELOPMENT OF DANGEROUS WEATHER. BE PREPARED TO ACT QUICKLY IN ';
-                } else { // Advisory
-                    urgencyWord = 'CAUTIONARY';
-                    actionWord = 'CAUTIOUS';
-                    severityDescription = 'CAUTION IS ADVISED DUE TO ';
-                }
-                
-                // Determine confirmation source based on alertBasis, only for Warning/Emergency
-                if (type === 'Warning' || type === 'Emergency') {
-                    if (alertBasis === 'Observed') {
-                        confirmationLine = `THE ${hazard.toUpperCase()} WAS OBSERVED BY SPOTTERS.`;
-                    } else if (alertBasis === 'Radar indicated rotation') {
-                        confirmationLine = `THE ${hazard.toUpperCase()} IS CONFIRMED BY RADAR INDICATED ROTATION.`;
-                    } else if (alertBasis === 'Radar indicated') {
-                        confirmationLine = `THE ${hazard.toUpperCase()} IS CONFIRMED BY RADAR.`;
-                    }
-                }
-                
-                const intro = `A ${urgencyWord} ${hazard.toUpperCase()} ${type.toUpperCase()} IS IN EFFECT FOR ${location.toUpperCase()} UNTIL ${expires}.`;
-                
-                // Construct the descriptive body
-                mainAlertDescription = `
-${intro}
-
-${severityDescription}${location.toUpperCase()}.
-${confirmationLine ? confirmationLine + '\n\n' : ''}${actionWord} ACTION IS REQUIRED TO PROTECT YOURSELF AND YOUR FAMILY FROM THIS HAZARD.
-`;
-
-                mainAlertDescription = mainAlertDescription.trim();
-                mesoscaleContent = ''; // Ensure it is empty
-            }
-            
-            // Build the final text
-            finalAlertText = `
-BULLETIN - IMMEDIATE BROADCAST REQUESTED
-INNOVATIVE WEATHER CENTER
-THE FOLLOWING IS A NON-OFFICIAL ALERT AND SHOULD BE TAKEN LIGHTLY.
-${alertHeader}
-ISSUED AT ${issued}
-EXPIRES AT ${expires}
-
-${mainAlertDescription}
-${mesoscaleContent.trim()}
-
----
-CALL TO ACTION
----
-
-${actionPhrase} IN THE AFFECTED REGION ${location.toUpperCase()}. MONITOR OFFICIAL INNOVATIVE WEATHER CENTER CHANNELS FOR CONTINUOUS UPDATES. SHELTERING PROTOCOLS SHOULD BE INITIATED BY LOCAL EMERGENCY MANAGEMENT IMMEDIATELY.
-
-(END INNOVATIVE WEATHER CENTER BULLETIN)`;
-        }
-
-        // Display the text on the page
-        document.getElementById('alertOutput').textContent = finalAlertText;
-
-        // Use standard Web Speech API to read the text
-        if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(finalAlertText);
-            
-            // Adjust speech rate slightly slower for an announcement feel
-            utterance.rate = 0.85; 
-            
-            // Speak the message
-            window.speechSynthesis.cancel(); // Stop any current speech
-            window.speechSynthesis.speak(utterance);
-        } else {
-            document.getElementById('alertOutput').textContent = "Generated Alert: " + finalAlertText;
-            console.error("Your browser does not support the Web Speech API (Text-to-Speech).");
-        }
-    }
-</script>
-
+    </script>
 </body>
 </html>
